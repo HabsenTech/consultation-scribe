@@ -103,32 +103,34 @@ const Index = () => {
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
       
-      <main className="flex-1 container mx-auto px-4 py-8">
+      <main className="flex-1 container mx-auto px-3 sm:px-4 py-4 sm:py-8">
         {/* Language Selection */}
-        <div className="mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-2xl font-bold text-foreground font-heading mb-1">
-              Consultation Recorder
-            </h2>
-            <p className="text-muted-foreground">
-              Record patient-doctor consultations and generate detailed prescriptions
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <LanguageSelector
-              selectedLanguage={selectedLanguage}
-              onLanguageChange={setSelectedLanguage}
-            />
-            <Button variant="outline" size="icon" onClick={handleReset}>
-              <RotateCcw className="w-4 h-4" />
-            </Button>
+        <div className="mb-4 sm:mb-8 flex flex-col gap-3 sm:gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+            <div>
+              <h2 className="text-xl sm:text-2xl font-bold text-foreground font-heading mb-0.5 sm:mb-1">
+                Consultation Recorder
+              </h2>
+              <p className="text-muted-foreground text-sm sm:text-base">
+                Record consultations and generate detailed prescriptions
+              </p>
+            </div>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <LanguageSelector
+                selectedLanguage={selectedLanguage}
+                onLanguageChange={setSelectedLanguage}
+              />
+              <Button variant="outline" size="icon" onClick={handleReset} className="h-9 w-9 sm:h-10 sm:w-10">
+                <RotateCcw className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         </div>
 
         {/* Main Content Grid */}
-        <div className="grid lg:grid-cols-2 gap-8">
+        <div className="grid lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
           {/* Left Column - Recording & Transcription */}
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             <AudioRecorder
               isListening={isListening}
               isSupported={isSupported}
@@ -145,11 +147,11 @@ const Index = () => {
 
             {transcriptions.length > 0 && !isListening && (
               <Button
-                className="w-full h-14 text-lg font-semibold"
+                className="w-full h-12 sm:h-14 text-sm sm:text-lg font-semibold"
                 onClick={handleGeneratePrescription}
                 disabled={isGenerating}
               >
-                <FileText className="w-5 h-5 mr-2" />
+                <FileText className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                 Generate Prescription Report
               </Button>
             )}
@@ -164,38 +166,44 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Instructions */}
-        <div className="mt-12 medical-card">
-          <h3 className="text-lg font-semibold text-foreground font-heading mb-4">
+        {/* Instructions - Mobile optimized */}
+        <div className="mt-8 sm:mt-12 medical-card">
+          <h3 className="text-base sm:text-lg font-semibold text-foreground font-heading mb-3 sm:mb-4">
             How to Use MedScribe AI
           </h3>
-          <div className="grid sm:grid-cols-3 gap-6">
-            <div className="text-center">
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
-                <span className="text-xl font-bold text-primary">1</span>
+          <div className="grid sm:grid-cols-3 gap-4 sm:gap-6">
+            <div className="flex sm:flex-col items-start sm:items-center text-left sm:text-center gap-3 sm:gap-0">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 sm:mx-auto sm:mb-3">
+                <span className="text-lg sm:text-xl font-bold text-primary">1</span>
               </div>
-              <h4 className="font-medium text-foreground mb-1">Select Language</h4>
-              <p className="text-sm text-muted-foreground">
-                Choose the consultation language (English, Hindi, Telugu, Tamil, Kannada, or Marathi)
-              </p>
+              <div>
+                <h4 className="font-medium text-foreground mb-0.5 sm:mb-1 text-sm sm:text-base">Select Language</h4>
+                <p className="text-xs sm:text-sm text-muted-foreground">
+                  Choose consultation language (English, Hindi, Telugu, Tamil, Kannada, Marathi)
+                </p>
+              </div>
             </div>
-            <div className="text-center">
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
-                <span className="text-xl font-bold text-primary">2</span>
+            <div className="flex sm:flex-col items-start sm:items-center text-left sm:text-center gap-3 sm:gap-0">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 sm:mx-auto sm:mb-3">
+                <span className="text-lg sm:text-xl font-bold text-primary">2</span>
               </div>
-              <h4 className="font-medium text-foreground mb-1">Record Consultation</h4>
-              <p className="text-sm text-muted-foreground">
-                Click the microphone and speak clearly during the patient-doctor consultation
-              </p>
+              <div>
+                <h4 className="font-medium text-foreground mb-0.5 sm:mb-1 text-sm sm:text-base">Record Consultation</h4>
+                <p className="text-xs sm:text-sm text-muted-foreground">
+                  Click the microphone and speak clearly during the consultation
+                </p>
+              </div>
             </div>
-            <div className="text-center">
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
-                <span className="text-xl font-bold text-primary">3</span>
+            <div className="flex sm:flex-col items-start sm:items-center text-left sm:text-center gap-3 sm:gap-0">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 sm:mx-auto sm:mb-3">
+                <span className="text-lg sm:text-xl font-bold text-primary">3</span>
               </div>
-              <h4 className="font-medium text-foreground mb-1">Generate & Share</h4>
-              <p className="text-sm text-muted-foreground">
-                Stop recording and click Generate to create a detailed prescription report
-              </p>
+              <div>
+                <h4 className="font-medium text-foreground mb-0.5 sm:mb-1 text-sm sm:text-base">Generate & Share</h4>
+                <p className="text-xs sm:text-sm text-muted-foreground">
+                  Stop recording and generate a detailed prescription report
+                </p>
+              </div>
             </div>
           </div>
         </div>

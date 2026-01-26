@@ -1,5 +1,5 @@
-import { SUPPORTED_LANGUAGES, Language } from '@/types/prescription';
-import { Globe } from 'lucide-react';
+import { SUPPORTED_LANGUAGES } from '@/types/prescription';
+import { Globe, ChevronDown } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -17,20 +17,25 @@ export function LanguageSelector({ selectedLanguage, onLanguageChange }: Languag
   const selectedLang = SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage);
 
   return (
-    <div className="flex items-center gap-3">
-      <Globe className="w-5 h-5 text-primary" />
+    <div className="flex items-center gap-2 sm:gap-3">
+      <Globe className="w-4 h-4 sm:w-5 sm:h-5 text-primary hidden sm:block" />
       <Select value={selectedLanguage} onValueChange={onLanguageChange}>
-        <SelectTrigger className="w-[200px] bg-card border-border">
+        <SelectTrigger className="w-[140px] sm:w-[200px] bg-card border-border text-sm">
           <SelectValue>
-            {selectedLang ? `${selectedLang.nativeName} (${selectedLang.name})` : 'Select Language'}
+            {selectedLang ? (
+              <span className="flex items-center gap-1">
+                <span className="font-medium">{selectedLang.nativeName}</span>
+                <span className="text-muted-foreground text-xs hidden sm:inline">({selectedLang.name})</span>
+              </span>
+            ) : 'Select Language'}
           </SelectValue>
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="bg-card border-border z-50">
           {SUPPORTED_LANGUAGES.map((lang) => (
-            <SelectItem key={lang.code} value={lang.code}>
+            <SelectItem key={lang.code} value={lang.code} className="text-sm">
               <span className="flex items-center gap-2">
                 <span className="font-medium">{lang.nativeName}</span>
-                <span className="text-muted-foreground text-sm">({lang.name})</span>
+                <span className="text-muted-foreground text-xs">({lang.name})</span>
               </span>
             </SelectItem>
           ))}

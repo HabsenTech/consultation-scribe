@@ -9,12 +9,15 @@ import {
   Share2,
   Download,
   Copy,
-  CheckCircle
+  CheckCircle,
+  FileDown,
+  MessageCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import jsPDF from 'jspdf';
 
 interface PrescriptionReportProps {
   report: PrescriptionReportType | null;
@@ -27,15 +30,15 @@ export function PrescriptionReportComponent({ report, isGenerating }: Prescripti
   if (isGenerating) {
     return (
       <div className="medical-card">
-        <div className="flex flex-col items-center py-12">
-          <div className="relative w-16 h-16 mb-6">
+        <div className="flex flex-col items-center py-8 sm:py-12">
+          <div className="relative w-14 h-14 sm:w-16 sm:h-16 mb-4 sm:mb-6">
             <div className="absolute inset-0 border-4 border-primary/20 rounded-full" />
             <div className="absolute inset-0 border-4 border-primary border-t-transparent rounded-full animate-spin" />
           </div>
-          <h3 className="text-lg font-semibold text-foreground font-heading mb-2">
+          <h3 className="text-base sm:text-lg font-semibold text-foreground font-heading mb-2 text-center">
             Generating Prescription Report...
           </h3>
-          <p className="text-muted-foreground text-center">
+          <p className="text-muted-foreground text-center text-sm sm:text-base px-4">
             AI is analyzing the consultation and preparing a detailed prescription
           </p>
         </div>
@@ -45,12 +48,12 @@ export function PrescriptionReportComponent({ report, isGenerating }: Prescripti
 
   if (!report) {
     return (
-      <div className="medical-card text-center py-12">
-        <FileText className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
-        <h3 className="text-lg font-semibold text-foreground mb-2 font-heading">
+      <div className="medical-card text-center py-8 sm:py-12">
+        <FileText className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground/50 mx-auto mb-3 sm:mb-4" />
+        <h3 className="text-base sm:text-lg font-semibold text-foreground mb-2 font-heading">
           No Prescription Report Yet
         </h3>
-        <p className="text-muted-foreground">
+        <p className="text-muted-foreground text-sm sm:text-base px-4">
           Record and complete a consultation to generate the prescription report
         </p>
       </div>
@@ -126,6 +129,152 @@ export function PrescriptionReportComponent({ report, isGenerating }: Prescripti
     toast.success('Prescription downloaded!');
   };
 
+  const handleDownloadPDF = () => {
+    const pdf = new jsPDF();
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    let y = 20;
+    const lineHeight = 7;
+    const margin = 20;
+    const maxWidth = pageWidth - margin * 2;
+
+    // Header
+    pdf.setFillColor(13, 148, 136); // Primary teal color
+    pdf.rect(0, 0, pageWidth, 40, 'F');
+    
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(20);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('PRESCRIPTION REPORT', pageWidth / 2, 18, { align: 'center' });
+    
+    pdf.setFontSize(10);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text('Habsen Tech Communication', pageWidth / 2, 28, { align: 'center' });
+    pdf.text(`Generated: ${report.generatedAt.toLocaleString('en-IN')}`, pageWidth / 2, 35, { align: 'center' });
+
+    y = 55;
+    pdf.setTextColor(0, 0, 0);
+
+    // Helper function to add section
+    const addSection = (title: string, content: string | string[], icon?: string) => {
+      if (y > 260) {
+        pdf.addPage();
+        y = 20;
+      }
+      
+      pdf.setFontSize(12);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(13, 148, 136);
+      pdf.text(title, margin, y);
+      y += lineHeight + 2;
+      
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(60, 60, 60);
+      
+      if (Array.isArray(content)) {
+        content.forEach(item => {
+          const lines = pdf.splitTextToSize(`• ${item}`, maxWidth);
+          lines.forEach((line: string) => {
+            if (y > 270) {
+              pdf.addPage();
+              y = 20;
+            }
+            pdf.text(line, margin, y);
+            y += lineHeight;
+          });
+        });
+      } else {
+        const lines = pdf.splitTextToSize(content, maxWidth);
+        lines.forEach((line: string) => {
+          if (y > 270) {
+            pdf.addPage();
+            y = 20;
+          }
+          pdf.text(line, margin, y);
+          y += lineHeight;
+        });
+      }
+      y += 5;
+    };
+
+    // Sections
+    addSection('PATIENT SYMPTOMS', report.patientInfo.symptoms);
+    addSection('MEDICAL HISTORY', report.patientInfo.medicalHistory);
+    addSection('CURRENT CONDITION', report.patientInfo.currentCondition);
+    
+    // Diagnosis with highlight
+    if (y > 250) {
+      pdf.addPage();
+      y = 20;
+    }
+    pdf.setFillColor(240, 253, 250);
+    pdf.roundedRect(margin - 5, y - 5, maxWidth + 10, 25, 3, 3, 'F');
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(13, 148, 136);
+    pdf.text('DIAGNOSIS', margin, y + 5);
+    pdf.setFontSize(11);
+    pdf.setTextColor(0, 0, 0);
+    pdf.text(report.diagnosis, margin, y + 15);
+    y += 35;
+
+    // Medications
+    if (y > 200) {
+      pdf.addPage();
+      y = 20;
+    }
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(13, 148, 136);
+    pdf.text('MEDICATIONS', margin, y);
+    y += lineHeight + 5;
+
+    report.medications.forEach((med, index) => {
+      if (y > 240) {
+        pdf.addPage();
+        y = 20;
+      }
+      
+      pdf.setFillColor(240, 253, 244);
+      pdf.roundedRect(margin - 5, y - 5, maxWidth + 10, 35, 3, 3, 'F');
+      
+      pdf.setFontSize(11);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(34, 197, 94);
+      pdf.text(`${index + 1}. ${med.name}`, margin, y + 3);
+      
+      pdf.setFontSize(9);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(60, 60, 60);
+      pdf.text(`Dosage: ${med.dosage}  |  Frequency: ${med.frequency}  |  Duration: ${med.duration}`, margin, y + 13);
+      pdf.text(`Instructions: ${med.instructions}`, margin, y + 22);
+      
+      y += 42;
+    });
+
+    addSection('MEDICAL ADVICE', report.advice);
+    addSection('FOLLOW-UP', report.followUp);
+
+    // Footer
+    const footerY = pdf.internal.pageSize.getHeight() - 15;
+    pdf.setFillColor(30, 41, 59);
+    pdf.rect(0, footerY - 10, pageWidth, 25, 'F');
+    
+    pdf.setFontSize(8);
+    pdf.setTextColor(255, 255, 255);
+    pdf.text('Developed by Habsen Tech Communication | Email: hadhi@habsentech.com | Phone: +91 9110593766', pageWidth / 2, footerY, { align: 'center' });
+
+    pdf.save(`prescription-${report.id}.pdf`);
+    toast.success('PDF downloaded successfully!');
+  };
+
+  const handleWhatsAppShare = () => {
+    const text = encodeURIComponent(formatReportAsText());
+    const whatsappUrl = `https://wa.me/?text=${text}`;
+    window.open(whatsappUrl, '_blank');
+    toast.success('Opening WhatsApp...');
+  };
+
   const handleShare = async () => {
     if (navigator.share) {
       try {
@@ -146,42 +295,77 @@ export function PrescriptionReportComponent({ report, isGenerating }: Prescripti
 
   return (
     <div className="medical-card">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-6">
         <div className="flex items-center gap-2">
           <FileText className="w-5 h-5 text-primary" />
-          <h3 className="text-lg font-semibold text-foreground font-heading">
+          <h3 className="text-base sm:text-lg font-semibold text-foreground font-heading">
             Prescription Report
           </h3>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleCopy}>
-            {copied ? <CheckCircle className="w-4 h-4 mr-1" /> : <Copy className="w-4 h-4 mr-1" />}
-            {copied ? 'Copied!' : 'Copy'}
+        
+        {/* Action Buttons - Mobile Grid */}
+        <div className="grid grid-cols-3 sm:flex sm:flex-wrap gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleCopy}
+            className="text-xs sm:text-sm"
+          >
+            {copied ? <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" /> : <Copy className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />}
+            <span className="hidden sm:inline">{copied ? 'Copied!' : 'Copy'}</span>
           </Button>
-          <Button variant="outline" size="sm" onClick={handleDownload}>
-            <Download className="w-4 h-4 mr-1" />
-            Download
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleDownload}
+            className="text-xs sm:text-sm"
+          >
+            <Download className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
+            <span className="hidden sm:inline">TXT</span>
           </Button>
-          <Button variant="default" size="sm" onClick={handleShare}>
-            <Share2 className="w-4 h-4 mr-1" />
-            Share
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleDownloadPDF}
+            className="text-xs sm:text-sm"
+          >
+            <FileDown className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
+            <span className="hidden sm:inline">PDF</span>
+          </Button>
+          <Button 
+            variant="default" 
+            size="sm" 
+            onClick={handleWhatsAppShare}
+            className="bg-green-600 hover:bg-green-700 text-xs sm:text-sm"
+          >
+            <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
+            <span className="hidden sm:inline">WhatsApp</span>
+          </Button>
+          <Button 
+            variant="secondary" 
+            size="sm" 
+            onClick={handleShare}
+            className="text-xs sm:text-sm col-span-2 sm:col-span-1"
+          >
+            <Share2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+            <span>Share</span>
           </Button>
         </div>
       </div>
 
-      <ScrollArea className="h-[500px] pr-4">
-        <div className="space-y-6">
+      <ScrollArea className="h-[350px] sm:h-[450px] lg:h-[500px] pr-2 sm:pr-4">
+        <div className="space-y-4 sm:space-y-6">
           {/* Symptoms */}
           <section>
-            <div className="flex items-center gap-2 mb-3">
+            <div className="flex items-center gap-2 mb-2 sm:mb-3">
               <AlertCircle className="w-4 h-4 text-medical-orange" />
-              <h4 className="font-semibold text-foreground">Patient Symptoms</h4>
+              <h4 className="font-semibold text-foreground text-sm sm:text-base">Patient Symptoms</h4>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5 sm:gap-2">
               {report.patientInfo.symptoms.map((symptom, i) => (
                 <span 
                   key={i}
-                  className="px-3 py-1.5 bg-medical-orange/10 text-medical-orange rounded-full text-sm"
+                  className="px-2 sm:px-3 py-1 sm:py-1.5 bg-medical-orange/10 text-medical-orange rounded-full text-xs sm:text-sm"
                 >
                   {symptom}
                 </span>
@@ -191,61 +375,61 @@ export function PrescriptionReportComponent({ report, isGenerating }: Prescripti
 
           {/* Medical History */}
           <section>
-            <div className="flex items-center gap-2 mb-3">
+            <div className="flex items-center gap-2 mb-2 sm:mb-3">
               <ClipboardList className="w-4 h-4 text-medical-blue" />
-              <h4 className="font-semibold text-foreground">Medical History</h4>
+              <h4 className="font-semibold text-foreground text-sm sm:text-base">Medical History</h4>
             </div>
-            <p className="text-muted-foreground p-3 bg-muted/50 rounded-lg">
+            <p className="text-muted-foreground p-2 sm:p-3 bg-muted/50 rounded-lg text-sm">
               {report.patientInfo.medicalHistory}
             </p>
           </section>
 
           {/* Current Condition */}
           <section>
-            <div className="flex items-center gap-2 mb-3">
+            <div className="flex items-center gap-2 mb-2 sm:mb-3">
               <Stethoscope className="w-4 h-4 text-primary" />
-              <h4 className="font-semibold text-foreground">Current Condition</h4>
+              <h4 className="font-semibold text-foreground text-sm sm:text-base">Current Condition</h4>
             </div>
-            <p className="text-muted-foreground p-3 bg-muted/50 rounded-lg">
+            <p className="text-muted-foreground p-2 sm:p-3 bg-muted/50 rounded-lg text-sm">
               {report.patientInfo.currentCondition}
             </p>
           </section>
 
           {/* Diagnosis */}
-          <section className="p-4 bg-primary/5 border border-primary/20 rounded-xl">
-            <div className="flex items-center gap-2 mb-3">
+          <section className="p-3 sm:p-4 bg-primary/5 border border-primary/20 rounded-xl">
+            <div className="flex items-center gap-2 mb-2 sm:mb-3">
               <Stethoscope className="w-4 h-4 text-primary" />
-              <h4 className="font-semibold text-primary">Diagnosis</h4>
+              <h4 className="font-semibold text-primary text-sm sm:text-base">Diagnosis</h4>
             </div>
-            <p className="text-foreground font-medium">{report.diagnosis}</p>
+            <p className="text-foreground font-medium text-sm sm:text-base">{report.diagnosis}</p>
           </section>
 
           {/* Medications */}
           <section>
-            <div className="flex items-center gap-2 mb-3">
+            <div className="flex items-center gap-2 mb-2 sm:mb-3">
               <Pill className="w-4 h-4 text-medical-green" />
-              <h4 className="font-semibold text-foreground">Medications</h4>
+              <h4 className="font-semibold text-foreground text-sm sm:text-base">Medications</h4>
             </div>
-            <div className="space-y-3">
+            <div className="space-y-2 sm:space-y-3">
               {report.medications.map((med, i) => (
-                <div key={i} className="p-4 bg-medical-green/5 border border-medical-green/20 rounded-xl">
-                  <h5 className="font-semibold text-medical-green mb-2">{med.name}</h5>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
+                <div key={i} className="p-3 sm:p-4 bg-medical-green/5 border border-medical-green/20 rounded-xl">
+                  <h5 className="font-semibold text-medical-green mb-2 text-sm sm:text-base">{med.name}</h5>
+                  <div className="grid grid-cols-2 gap-1.5 sm:gap-2 text-xs sm:text-sm">
                     <div>
                       <span className="text-muted-foreground">Dosage:</span>
-                      <span className="ml-2 text-foreground">{med.dosage}</span>
+                      <span className="ml-1 sm:ml-2 text-foreground">{med.dosage}</span>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Frequency:</span>
-                      <span className="ml-2 text-foreground">{med.frequency}</span>
+                      <span className="ml-1 sm:ml-2 text-foreground">{med.frequency}</span>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Duration:</span>
-                      <span className="ml-2 text-foreground">{med.duration}</span>
+                      <span className="ml-1 sm:ml-2 text-foreground">{med.duration}</span>
                     </div>
                     <div className="col-span-2">
                       <span className="text-muted-foreground">Instructions:</span>
-                      <span className="ml-2 text-foreground">{med.instructions}</span>
+                      <span className="ml-1 sm:ml-2 text-foreground">{med.instructions}</span>
                     </div>
                   </div>
                 </div>
@@ -255,14 +439,14 @@ export function PrescriptionReportComponent({ report, isGenerating }: Prescripti
 
           {/* Advice */}
           <section>
-            <div className="flex items-center gap-2 mb-3">
+            <div className="flex items-center gap-2 mb-2 sm:mb-3">
               <ClipboardList className="w-4 h-4 text-primary" />
-              <h4 className="font-semibold text-foreground">Medical Advice</h4>
+              <h4 className="font-semibold text-foreground text-sm sm:text-base">Medical Advice</h4>
             </div>
-            <ul className="space-y-2">
+            <ul className="space-y-1.5 sm:space-y-2">
               {report.advice.map((item, i) => (
-                <li key={i} className="flex items-start gap-2 text-muted-foreground">
-                  <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0" />
+                <li key={i} className="flex items-start gap-2 text-muted-foreground text-sm">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 sm:mt-2 flex-shrink-0" />
                   {item}
                 </li>
               ))}
@@ -270,12 +454,12 @@ export function PrescriptionReportComponent({ report, isGenerating }: Prescripti
           </section>
 
           {/* Follow-up */}
-          <section className="p-4 bg-medical-blue/5 border border-medical-blue/20 rounded-xl">
+          <section className="p-3 sm:p-4 bg-medical-blue/5 border border-medical-blue/20 rounded-xl">
             <div className="flex items-center gap-2 mb-2">
               <Calendar className="w-4 h-4 text-medical-blue" />
-              <h4 className="font-semibold text-medical-blue">Follow-up</h4>
+              <h4 className="font-semibold text-medical-blue text-sm sm:text-base">Follow-up</h4>
             </div>
-            <p className="text-foreground">{report.followUp}</p>
+            <p className="text-foreground text-sm sm:text-base">{report.followUp}</p>
           </section>
         </div>
       </ScrollArea>
