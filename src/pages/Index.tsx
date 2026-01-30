@@ -7,6 +7,7 @@ import { AudioRecorder } from '@/components/AudioRecorder';
 import { TranscriptionDisplay } from '@/components/TranscriptionDisplay';
 import { PrescriptionReportComponent } from '@/components/PrescriptionReport';
 import { PatientInfoForm, PatientInfo, PatientVitals } from '@/components/PatientInfoForm';
+import { RecentConsultations } from '@/components/RecentConsultations';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { TranscriptionEntry, PrescriptionReport, SUPPORTED_LANGUAGES } from '@/types/prescription';
 import { Button } from '@/components/ui/button';
@@ -281,6 +282,11 @@ const Index = () => {
               patientVitals={patientVitals}
             />
           </div>
+        </div>
+
+        {/* Recent Consultations Widget */}
+        <div className="mt-8">
+          <RecentConsultations />
         </div>
 
         {/* Instructions */}

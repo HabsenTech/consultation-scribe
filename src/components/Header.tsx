@@ -2,7 +2,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Stethoscope, User, Settings, Shield, LogOut, CreditCard, LogIn } from 'lucide-react';
+import { Stethoscope, User, Settings, Shield, LogOut, CreditCard, LogIn, History, DollarSign } from 'lucide-react';
 
 export function Header() {
   const navigate = useNavigate();
@@ -32,6 +32,20 @@ export function Header() {
           </Link>
 
           <div className="flex items-center gap-2 sm:gap-3">
+            {/* Navigation Links */}
+            <nav className="hidden md:flex items-center gap-1">
+              <Button variant="ghost" size="sm" onClick={() => navigate('/pricing')}>
+                <DollarSign className="w-4 h-4 mr-1" />
+                Pricing
+              </Button>
+              {user && (
+                <Button variant="ghost" size="sm" onClick={() => navigate('/history')}>
+                  <History className="w-4 h-4 mr-1" />
+                  History
+                </Button>
+              )}
+            </nav>
+
             {!loading && (
               <>
                 {user ? (
@@ -57,6 +71,14 @@ export function Header() {
                           </p>
                         </div>
                         <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => navigate('/history')} className="md:hidden">
+                          <History className="w-4 h-4 mr-2" />
+                          Consultation History
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => navigate('/pricing')} className="md:hidden">
+                          <DollarSign className="w-4 h-4 mr-2" />
+                          Pricing
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => navigate('/profile')}>
                           <Settings className="w-4 h-4 mr-2" />
                           Profile Settings
