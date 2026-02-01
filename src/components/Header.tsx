@@ -2,7 +2,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Stethoscope, User, Settings, Shield, LogOut, CreditCard, LogIn, History, DollarSign, HelpCircle, Info, Menu } from 'lucide-react';
+import { Stethoscope, User, Settings, LogOut, CreditCard, LogIn, History, DollarSign, HelpCircle, Info, Menu } from 'lucide-react';
 
 export function Header() {
   const navigate = useNavigate();
@@ -116,12 +116,6 @@ export function Header() {
                           <Settings className="w-4 h-4 mr-2" />
                           Settings
                         </DropdownMenuItem>
-                        {isAdmin && (
-                          <DropdownMenuItem onClick={() => navigate('/admin')}>
-                            <Shield className="w-4 h-4 mr-2" />
-                            Admin Portal
-                          </DropdownMenuItem>
-                        )}
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
                           <LogOut className="w-4 h-4 mr-2" />
