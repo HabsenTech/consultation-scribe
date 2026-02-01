@@ -10,6 +10,7 @@ import { PrescriptionReportComponent } from '@/components/PrescriptionReport';
 import { PatientInfoForm, PatientInfo, PatientVitals } from '@/components/PatientInfoForm';
 import { RecentConsultations } from '@/components/RecentConsultations';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
+import { useBackendTranscription } from '@/hooks/useBackendTranscription';
 import { TranscriptionEntry, PrescriptionReport, SUPPORTED_LANGUAGES } from '@/types/prescription';
 import { Button } from '@/components/ui/button';
 import { FileText, RotateCcw, Loader2, AlertCircle } from 'lucide-react';
@@ -48,10 +49,11 @@ const Index = () => {
     setTranscriptions(prev => [...prev, entry]);
   }, []);
 
+  // Desktop: use browser speech recognition
   const {
     isListening,
     isSupported,
-    error,
+    error: speechError,
     interimTranscript,
     startListening,
     stopListening,
@@ -59,6 +61,20 @@ const Index = () => {
     languageCode: selectedLanguage,
     onTranscription: handleTranscription,
   });
+
+  // Mobile: use backend transcription for better accuracy
+  const {
+    isRecording,
+    isTranscribing,
+    error: backendError,
+    startRecording,
+    stopRecording,
+  } = useBackendTranscription({
+    languageCode: selectedLanguage,
+    onTranscription: handleTranscription,
+  });
+
+  const error = isMobile ? backendError : speechError;
 
   const handleClearTranscriptions = () => {
     setTranscriptions([]);
@@ -252,18 +268,17 @@ const Index = () => {
           <div className="space-y-4 sm:space-y-6">
             {isMobile ? (
               <MobileAudioRecorder
-                isListening={isListening}
-                isSupported={isSupported}
-                error={error}
-                interimTranscript={interimTranscript}
-                onStart={startListening}
-                onStop={stopListening}
+                isRecording={isRecording}
+                isTranscribing={isTranscribing}
+                error={backendError}
+                onStart={startRecording}
+                onStop={stopRecording}
               />
             ) : (
               <AudioRecorder
                 isListening={isListening}
                 isSupported={isSupported}
-                error={error}
+                error={speechError}
                 interimTranscript={interimTranscript}
                 onStart={startListening}
                 onStop={stopListening}
@@ -275,7 +290,7 @@ const Index = () => {
               onClear={handleClearTranscriptions}
             />
 
-            {transcriptions.length > 0 && !isListening && (
+            {transcriptions.length > 0 && !isListening && !isRecording && !isTranscribing && (
               <Button
                 className="w-full h-12 sm:h-14 text-sm sm:text-lg font-semibold"
                 onClick={handleGeneratePrescription}
