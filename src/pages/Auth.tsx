@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { signInWithGoogle } from '@/lib/lovable-auth';
+import { lovable } from '@/integrations/lovable';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -44,10 +44,12 @@ const Auth = () => {
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
     try {
-      const { error } = await signInWithGoogle();
-      if (error) {
+      const result = await lovable.auth.signInWithOAuth('google', {
+        redirect_uri: window.location.origin,
+      });
+      if (result.error) {
         toast.error('Failed to sign in with Google. Please try again.');
-        console.error('Google sign-in error:', error);
+        console.error('Google sign-in error:', result.error);
       }
     } catch (err) {
       toast.error('An unexpected error occurred. Please try again.');
