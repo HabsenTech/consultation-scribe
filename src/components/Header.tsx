@@ -2,7 +2,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Stethoscope, User, Settings, Shield, LogOut, CreditCard, LogIn, History, DollarSign } from 'lucide-react';
+import { Stethoscope, User, Settings, Shield, LogOut, CreditCard, LogIn, History, DollarSign, HelpCircle, Info, Menu } from 'lucide-react';
 
 export function Header() {
   const navigate = useNavigate();
@@ -25,15 +25,15 @@ export function Header() {
               <h1 className="text-lg sm:text-xl font-bold text-foreground font-heading">
                 MedScribe AI
               </h1>
-              <p className="text-xs sm:text-sm text-muted-foreground">
+              <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">
                 Smart Prescription Generator
               </p>
             </div>
           </Link>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Navigation Links */}
-            <nav className="hidden md:flex items-center gap-1">
+            {/* Desktop Navigation */}
+            <nav className="hidden lg:flex items-center gap-1">
               <Button variant="ghost" size="sm" onClick={() => navigate('/pricing')}>
                 <DollarSign className="w-4 h-4 mr-1" />
                 Pricing
@@ -44,7 +44,44 @@ export function Header() {
                   History
                 </Button>
               )}
+              <Button variant="ghost" size="sm" onClick={() => navigate('/help')}>
+                <HelpCircle className="w-4 h-4 mr-1" />
+                Help
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => navigate('/about')}>
+                <Info className="w-4 h-4 mr-1" />
+                About
+              </Button>
             </nav>
+
+            {/* Mobile Navigation Menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild className="lg:hidden">
+                <Button variant="outline" size="icon">
+                  <Menu className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={() => navigate('/pricing')}>
+                  <DollarSign className="w-4 h-4 mr-2" />
+                  Pricing
+                </DropdownMenuItem>
+                {user && (
+                  <DropdownMenuItem onClick={() => navigate('/history')}>
+                    <History className="w-4 h-4 mr-2" />
+                    History
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem onClick={() => navigate('/help')}>
+                  <HelpCircle className="w-4 h-4 mr-2" />
+                  Help & FAQ
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/about')}>
+                  <Info className="w-4 h-4 mr-2" />
+                  About
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             {!loading && (
               <>
@@ -53,7 +90,7 @@ export function Header() {
                     {/* Credits Badge */}
                     <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium">
                       <CreditCard className="w-4 h-4" />
-                      <span>{credits?.remaining ?? 0} credits</span>
+                      <span>{credits?.remaining ?? 0}</span>
                     </div>
 
                     {/* User Menu */}
@@ -71,17 +108,13 @@ export function Header() {
                           </p>
                         </div>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => navigate('/history')} className="md:hidden">
-                          <History className="w-4 h-4 mr-2" />
-                          Consultation History
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => navigate('/pricing')} className="md:hidden">
-                          <DollarSign className="w-4 h-4 mr-2" />
-                          Pricing
-                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => navigate('/profile')}>
+                          <User className="w-4 h-4 mr-2" />
+                          Profile
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => navigate('/settings')}>
                           <Settings className="w-4 h-4 mr-2" />
-                          Profile Settings
+                          Settings
                         </DropdownMenuItem>
                         {isAdmin && (
                           <DropdownMenuItem onClick={() => navigate('/admin')}>

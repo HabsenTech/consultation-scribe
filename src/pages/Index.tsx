@@ -4,6 +4,7 @@ import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { LanguageSelector } from '@/components/LanguageSelector';
 import { AudioRecorder } from '@/components/AudioRecorder';
+import { MobileAudioRecorder } from '@/components/MobileAudioRecorder';
 import { TranscriptionDisplay } from '@/components/TranscriptionDisplay';
 import { PrescriptionReportComponent } from '@/components/PrescriptionReport';
 import { PatientInfoForm, PatientInfo, PatientVitals } from '@/components/PatientInfoForm';
@@ -16,9 +17,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const Index = () => {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const { user, loading, credits, refreshCredits } = useAuth();
   const [selectedLanguage, setSelectedLanguage] = useState('en');
   const [transcriptions, setTranscriptions] = useState<TranscriptionEntry[]>([]);
@@ -247,14 +250,25 @@ const Index = () => {
         <div className="grid lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
           {/* Left Column - Recording & Transcription */}
           <div className="space-y-4 sm:space-y-6">
-            <AudioRecorder
-              isListening={isListening}
-              isSupported={isSupported}
-              error={error}
-              interimTranscript={interimTranscript}
-              onStart={startListening}
-              onStop={stopListening}
-            />
+            {isMobile ? (
+              <MobileAudioRecorder
+                isListening={isListening}
+                isSupported={isSupported}
+                error={error}
+                interimTranscript={interimTranscript}
+                onStart={startListening}
+                onStop={stopListening}
+              />
+            ) : (
+              <AudioRecorder
+                isListening={isListening}
+                isSupported={isSupported}
+                error={error}
+                interimTranscript={interimTranscript}
+                onStart={startListening}
+                onStop={stopListening}
+              />
+            )}
 
             <TranscriptionDisplay
               entries={transcriptions}
