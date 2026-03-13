@@ -19,6 +19,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { api } from '@/lib/api';
 
 const Index = () => {
   const navigate = useNavigate();
@@ -29,50 +30,23 @@ const Index = () => {
   const [prescription, setPrescription] = useState<PrescriptionReport | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [patientInfo, setPatientInfo] = useState<PatientInfo>({
-    name: '',
-    age: '',
-    gender: '',
-    address: '',
-    occupation: '',
+    name: '', age: '', gender: '', address: '', occupation: '',
   });
   const [patientVitals, setPatientVitals] = useState<PatientVitals>({
-    bloodPressure: '',
-    pulse: '',
-    temperature: '',
-    weight: '',
-    height: '',
-    respiratoryRate: '',
-    spo2: '',
+    bloodPressure: '', pulse: '', temperature: '', weight: '', height: '', respiratoryRate: '', spo2: '',
   });
 
   const handleTranscription = useCallback((entry: TranscriptionEntry) => {
     setTranscriptions(prev => [...prev, entry]);
   }, []);
 
-  // Desktop: use browser speech recognition
   const {
-    isListening,
-    isSupported,
-    error: speechError,
-    interimTranscript,
-    startListening,
-    stopListening,
-  } = useSpeechRecognition({
-    languageCode: selectedLanguage,
-    onTranscription: handleTranscription,
-  });
+    isListening, isSupported, error: speechError, interimTranscript, startListening, stopListening,
+  } = useSpeechRecognition({ languageCode: selectedLanguage, onTranscription: handleTranscription });
 
-  // Mobile: use backend transcription for better accuracy
   const {
-    isRecording,
-    isTranscribing,
-    error: backendError,
-    startRecording,
-    stopRecording,
-  } = useBackendTranscription({
-    languageCode: selectedLanguage,
-    onTranscription: handleTranscription,
-  });
+    isRecording, isTranscribing, error: backendError, startRecording, stopRecording,
+  } = useBackendTranscription({ languageCode: selectedLanguage, onTranscription: handleTranscription });
 
   const error = isMobile ? backendError : speechError;
 
@@ -89,7 +63,6 @@ const Index = () => {
   const isChild = patientInfo.gender?.includes('child');
   const isFemale = patientInfo.gender === 'female' || patientInfo.gender === 'child-female';
 
-  // Redirect to auth if not logged in
   useEffect(() => {
     if (!loading && !user) {
       navigate('/auth');
@@ -102,7 +75,6 @@ const Index = () => {
       return;
     }
 
-    // Check credits
     if (!credits || credits.remaining <= 0) {
       toast.error('No credits remaining. Please contact admin to add more credits.');
       return;
@@ -111,10 +83,9 @@ const Index = () => {
     setIsGenerating(true);
     
     try {
-      const fullTranscript = transcriptions
-        .map(t => t.text)
-        .join('\n');
+      const fullTranscript = transcriptions.map(t => t.text).join('\n');
 
+      // Generate prescription via edge function (keeps AI logic server-side)
       const { data, error } = await supabase.functions.invoke('generate-prescription', {
         body: { 
           transcript: fullTranscript,
@@ -159,13 +130,11 @@ const Index = () => {
         };
         setPrescription(report);
 
-        // Deduct credit and save consultation
+        // Save consultation and deduct credit via backend API
         if (user) {
-          // Encrypt and save consultation
-          const encryptedData = btoa(JSON.stringify(report)); // Basic encoding for now
+          const encryptedData = btoa(JSON.stringify(report));
           
-          await supabase.from('consultations').insert({
-            user_id: user.id,
+          await api.createConsultation({
             patient_name: patientInfo.name || 'Unknown',
             patient_age: patientInfo.age,
             patient_gender: patientInfo.gender,
@@ -175,13 +144,7 @@ const Index = () => {
             diagnosis: data.prescription.diagnosis,
           });
 
-          // Deduct credit
-          const currentUsed = credits?.used || 0;
-          await supabase.from('user_credits')
-            .update({ used_credits: currentUsed + 1 })
-            .eq('user_id', user.id);
-
-          // Refresh credits display
+          await api.deductCredit();
           await refreshCredits();
         }
 
@@ -204,7 +167,6 @@ const Index = () => {
     toast.success('Session reset. Ready for new consultation.');
   };
 
-  // Show loading while checking auth
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -218,7 +180,6 @@ const Index = () => {
       <Header />
       
       <main className="flex-1 container mx-auto px-3 sm:px-4 py-4 sm:py-8">
-        {/* Low Credits Warning */}
         {credits && credits.remaining <= 2 && (
           <Alert variant="destructive" className="mb-4">
             <AlertCircle className="h-4 w-4" />
@@ -228,7 +189,6 @@ const Index = () => {
             </AlertDescription>
           </Alert>
         )}
-        {/* Language Selection */}
         <div className="mb-4 sm:mb-8 flex flex-col gap-3 sm:gap-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
             <div>
@@ -240,10 +200,7 @@ const Index = () => {
               </p>
             </div>
             <div className="flex items-center gap-2 sm:gap-3">
-              <LanguageSelector
-                selectedLanguage={selectedLanguage}
-                onLanguageChange={setSelectedLanguage}
-              />
+              <LanguageSelector selectedLanguage={selectedLanguage} onLanguageChange={setSelectedLanguage} />
               <Button variant="outline" size="icon" onClick={handleReset} className="h-9 w-9 sm:h-10 sm:w-10">
                 <RotateCcw className="w-4 h-4" />
               </Button>
@@ -251,127 +208,60 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Patient Info Form */}
         <div className="mb-4 sm:mb-6">
           <PatientInfoForm
-            patientInfo={patientInfo}
-            vitals={patientVitals}
-            onPatientInfoChange={setPatientInfo}
-            onVitalsChange={setPatientVitals}
+            patientInfo={patientInfo} vitals={patientVitals}
+            onPatientInfoChange={setPatientInfo} onVitalsChange={setPatientVitals}
             disabled={isListening}
           />
         </div>
 
-        {/* Main Content Grid */}
         <div className="grid lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
-          {/* Left Column - Recording & Transcription */}
           <div className="space-y-4 sm:space-y-6">
             {isMobile ? (
-              <MobileAudioRecorder
-                isRecording={isRecording}
-                isTranscribing={isTranscribing}
-                error={backendError}
-                onStart={startRecording}
-                onStop={stopRecording}
-              />
+              <MobileAudioRecorder isRecording={isRecording} isTranscribing={isTranscribing} error={backendError} onStart={startRecording} onStop={stopRecording} />
             ) : (
-              <AudioRecorder
-                isListening={isListening}
-                isSupported={isSupported}
-                error={speechError}
-                interimTranscript={interimTranscript}
-                onStart={startListening}
-                onStop={stopListening}
-              />
+              <AudioRecorder isListening={isListening} isSupported={isSupported} error={speechError} interimTranscript={interimTranscript} onStart={startListening} onStop={stopListening} />
             )}
-
-            <TranscriptionDisplay
-              entries={transcriptions}
-              onClear={handleClearTranscriptions}
-            />
-
+            <TranscriptionDisplay entries={transcriptions} onClear={handleClearTranscriptions} />
             {transcriptions.length > 0 && !isListening && !isRecording && !isTranscribing && (
-              <Button
-                className="w-full h-12 sm:h-14 text-sm sm:text-lg font-semibold"
-                onClick={handleGeneratePrescription}
-                disabled={isGenerating}
-              >
+              <Button className="w-full h-12 sm:h-14 text-sm sm:text-lg font-semibold" onClick={handleGeneratePrescription} disabled={isGenerating}>
                 <FileText className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                 Generate Prescription Report
               </Button>
             )}
           </div>
-
-          {/* Right Column - Prescription Report */}
           <div>
-            <PrescriptionReportComponent
-              report={prescription}
-              isGenerating={isGenerating}
-              patientDetails={patientInfo}
-              patientVitals={patientVitals}
-            />
+            <PrescriptionReportComponent report={prescription} isGenerating={isGenerating} patientDetails={patientInfo} patientVitals={patientVitals} />
           </div>
         </div>
 
-        {/* Recent Consultations Widget */}
         <div className="mt-8">
           <RecentConsultations />
         </div>
 
-        {/* Instructions */}
         <div className="mt-8 sm:mt-12 medical-card">
-          <h3 className="text-base sm:text-lg font-semibold text-foreground font-heading mb-3 sm:mb-4">
-            How to Use MedScribe AI
-          </h3>
+          <h3 className="text-base sm:text-lg font-semibold text-foreground font-heading mb-3 sm:mb-4">How to Use MedScribe AI</h3>
           <div className="grid sm:grid-cols-4 gap-4 sm:gap-6">
-            <div className="flex sm:flex-col items-start sm:items-center text-left sm:text-center gap-3 sm:gap-0">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 sm:mx-auto sm:mb-3">
-                <span className="text-lg sm:text-xl font-bold text-primary">1</span>
+            {[
+              { num: '1', title: 'Enter Patient Info', desc: 'Fill in patient details, address, occupation & vitals' },
+              { num: '2', title: 'Select Language', desc: 'Choose consultation language' },
+              { num: '3', title: 'Record Consultation', desc: 'Click the microphone and speak' },
+              { num: '4', title: 'Generate & Share', desc: 'Generate comprehensive prescription report' },
+            ].map(step => (
+              <div key={step.num} className="flex sm:flex-col items-start sm:items-center text-left sm:text-center gap-3 sm:gap-0">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 sm:mx-auto sm:mb-3">
+                  <span className="text-lg sm:text-xl font-bold text-primary">{step.num}</span>
+                </div>
+                <div>
+                  <h4 className="font-medium text-foreground mb-0.5 sm:mb-1 text-sm sm:text-base">{step.title}</h4>
+                  <p className="text-xs sm:text-sm text-muted-foreground">{step.desc}</p>
+                </div>
               </div>
-              <div>
-                <h4 className="font-medium text-foreground mb-0.5 sm:mb-1 text-sm sm:text-base">Enter Patient Info</h4>
-                <p className="text-xs sm:text-sm text-muted-foreground">
-                  Fill in patient details, address, occupation & vitals
-                </p>
-              </div>
-            </div>
-            <div className="flex sm:flex-col items-start sm:items-center text-left sm:text-center gap-3 sm:gap-0">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 sm:mx-auto sm:mb-3">
-                <span className="text-lg sm:text-xl font-bold text-primary">2</span>
-              </div>
-              <div>
-                <h4 className="font-medium text-foreground mb-0.5 sm:mb-1 text-sm sm:text-base">Select Language</h4>
-                <p className="text-xs sm:text-sm text-muted-foreground">
-                  Choose consultation language
-                </p>
-              </div>
-            </div>
-            <div className="flex sm:flex-col items-start sm:items-center text-left sm:text-center gap-3 sm:gap-0">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 sm:mx-auto sm:mb-3">
-                <span className="text-lg sm:text-xl font-bold text-primary">3</span>
-              </div>
-              <div>
-                <h4 className="font-medium text-foreground mb-0.5 sm:mb-1 text-sm sm:text-base">Record Consultation</h4>
-                <p className="text-xs sm:text-sm text-muted-foreground">
-                  Click the microphone and speak
-                </p>
-              </div>
-            </div>
-            <div className="flex sm:flex-col items-start sm:items-center text-left sm:text-center gap-3 sm:gap-0">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 sm:mx-auto sm:mb-3">
-                <span className="text-lg sm:text-xl font-bold text-primary">4</span>
-              </div>
-              <div>
-                <h4 className="font-medium text-foreground mb-0.5 sm:mb-1 text-sm sm:text-base">Generate & Share</h4>
-                <p className="text-xs sm:text-sm text-muted-foreground">
-                  Generate comprehensive prescription report
-                </p>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </main>
-
       <Footer />
     </div>
   );

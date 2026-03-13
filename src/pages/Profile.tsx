@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { api } from '@/lib/api';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
@@ -44,52 +44,30 @@ const Profile = () => {
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
 
   const [profile, setProfile] = useState<ProfileData>({
-    full_name: '',
-    clinic_name: '',
-    clinic_address: '',
-    clinic_phone: '',
-    doctor_name: '',
-    doctor_qualifications: '',
-    registration_number: '',
+    full_name: '', clinic_name: '', clinic_address: '', clinic_phone: '',
+    doctor_name: '', doctor_qualifications: '', registration_number: '',
   });
 
   const [preferences, setPreferences] = useState<PreferencesData>({
-    show_past_history: true,
-    show_drug_history: true,
-    show_vaccination_history: true,
-    show_birth_history: true,
-    show_pregnancy_history: true,
-    show_family_history: true,
-    show_investigations: true,
-    show_advice: true,
-    show_diet_chart: true,
+    show_past_history: true, show_drug_history: true, show_vaccination_history: true,
+    show_birth_history: true, show_pregnancy_history: true, show_family_history: true,
+    show_investigations: true, show_advice: true, show_diet_chart: true,
     default_follow_up_days: 7,
   });
 
   useEffect(() => {
-    if (!loading && !user) {
-      navigate('/auth');
-    }
+    if (!loading && !user) navigate('/auth');
   }, [user, loading, navigate]);
 
   useEffect(() => {
-    if (user) {
-      fetchProfileData();
-    }
+    if (user) fetchProfileData();
   }, [user]);
 
   const fetchProfileData = async () => {
     if (!user) return;
-
     setIsLoadingProfile(true);
     try {
-      // Fetch profile
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .maybeSingle();
-
+      const { profile: profileData } = await api.getProfile();
       if (profileData) {
         setProfile({
           full_name: profileData.full_name || '',
@@ -102,13 +80,7 @@ const Profile = () => {
         });
       }
 
-      // Fetch preferences
-      const { data: prefsData } = await supabase
-        .from('consultation_preferences')
-        .select('*')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
+      const { preferences: prefsData } = await api.getPreferences();
       if (prefsData) {
         setPreferences({
           show_past_history: prefsData.show_past_history ?? true,
@@ -133,15 +105,9 @@ const Profile = () => {
 
   const handleSaveProfile = async () => {
     if (!user) return;
-
     setIsSaving(true);
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update(profile)
-        .eq('id', user.id);
-
-      if (error) throw error;
+      await api.updateProfile(profile);
       toast.success('Profile saved successfully!');
     } catch (error) {
       console.error('Error saving profile:', error);
@@ -153,15 +119,9 @@ const Profile = () => {
 
   const handleSavePreferences = async () => {
     if (!user) return;
-
     setIsSaving(true);
     try {
-      const { error } = await supabase
-        .from('consultation_preferences')
-        .update(preferences)
-        .eq('user_id', user.id);
-
-      if (error) throw error;
+      await api.updatePreferences(preferences);
       toast.success('Preferences saved successfully!');
     } catch (error) {
       console.error('Error saving preferences:', error);
@@ -182,14 +142,12 @@ const Profile = () => {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
-
       <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground font-heading">Profile Settings</h1>
           <p className="text-muted-foreground mt-1">Manage your clinic details and consultation preferences</p>
         </div>
 
-        {/* Credits Card */}
         <Card className="mb-6 border-primary/20 bg-primary/5">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
@@ -219,21 +177,11 @@ const Profile = () => {
 
         <Tabs defaultValue="clinic" className="space-y-6">
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="clinic" className="flex items-center gap-2">
-              <Building2 className="w-4 h-4" />
-              <span className="hidden sm:inline">Clinic Info</span>
-            </TabsTrigger>
-            <TabsTrigger value="doctor" className="flex items-center gap-2">
-              <User className="w-4 h-4" />
-              <span className="hidden sm:inline">Doctor Details</span>
-            </TabsTrigger>
-            <TabsTrigger value="preferences" className="flex items-center gap-2">
-              <Settings className="w-4 h-4" />
-              <span className="hidden sm:inline">Preferences</span>
-            </TabsTrigger>
+            <TabsTrigger value="clinic" className="flex items-center gap-2"><Building2 className="w-4 h-4" /><span className="hidden sm:inline">Clinic Info</span></TabsTrigger>
+            <TabsTrigger value="doctor" className="flex items-center gap-2"><User className="w-4 h-4" /><span className="hidden sm:inline">Doctor Details</span></TabsTrigger>
+            <TabsTrigger value="preferences" className="flex items-center gap-2"><Settings className="w-4 h-4" /><span className="hidden sm:inline">Preferences</span></TabsTrigger>
           </TabsList>
 
-          {/* Clinic Info Tab */}
           <TabsContent value="clinic">
             <Card>
               <CardHeader>
@@ -244,31 +192,16 @@ const Profile = () => {
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="clinic_name">Clinic Name</Label>
-                    <Input
-                      id="clinic_name"
-                      value={profile.clinic_name}
-                      onChange={(e) => setProfile({ ...profile, clinic_name: e.target.value })}
-                      placeholder="ABC Medical Clinic"
-                    />
+                    <Input id="clinic_name" value={profile.clinic_name} onChange={(e) => setProfile({ ...profile, clinic_name: e.target.value })} placeholder="ABC Medical Clinic" />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="clinic_phone">Phone Number</Label>
-                    <Input
-                      id="clinic_phone"
-                      value={profile.clinic_phone}
-                      onChange={(e) => setProfile({ ...profile, clinic_phone: e.target.value })}
-                      placeholder="+91 9876543210"
-                    />
+                    <Input id="clinic_phone" value={profile.clinic_phone} onChange={(e) => setProfile({ ...profile, clinic_phone: e.target.value })} placeholder="+91 9876543210" />
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="clinic_address">Clinic Address</Label>
-                  <Input
-                    id="clinic_address"
-                    value={profile.clinic_address}
-                    onChange={(e) => setProfile({ ...profile, clinic_address: e.target.value })}
-                    placeholder="123 Medical Street, City - 500001"
-                  />
+                  <Input id="clinic_address" value={profile.clinic_address} onChange={(e) => setProfile({ ...profile, clinic_address: e.target.value })} placeholder="123 Medical Street, City - 500001" />
                 </div>
                 <Button onClick={handleSaveProfile} disabled={isSaving}>
                   {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
@@ -278,7 +211,6 @@ const Profile = () => {
             </Card>
           </TabsContent>
 
-          {/* Doctor Details Tab */}
           <TabsContent value="doctor">
             <Card>
               <CardHeader>
@@ -289,31 +221,16 @@ const Profile = () => {
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="doctor_name">Doctor Name</Label>
-                    <Input
-                      id="doctor_name"
-                      value={profile.doctor_name}
-                      onChange={(e) => setProfile({ ...profile, doctor_name: e.target.value })}
-                      placeholder="Dr. John Doe"
-                    />
+                    <Input id="doctor_name" value={profile.doctor_name} onChange={(e) => setProfile({ ...profile, doctor_name: e.target.value })} placeholder="Dr. John Doe" />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="registration_number">Registration Number</Label>
-                    <Input
-                      id="registration_number"
-                      value={profile.registration_number}
-                      onChange={(e) => setProfile({ ...profile, registration_number: e.target.value })}
-                      placeholder="MCI-12345"
-                    />
+                    <Input id="registration_number" value={profile.registration_number} onChange={(e) => setProfile({ ...profile, registration_number: e.target.value })} placeholder="MCI-12345" />
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="doctor_qualifications">Qualifications</Label>
-                  <Input
-                    id="doctor_qualifications"
-                    value={profile.doctor_qualifications}
-                    onChange={(e) => setProfile({ ...profile, doctor_qualifications: e.target.value })}
-                    placeholder="MBBS, MD, FRCP"
-                  />
+                  <Input id="doctor_qualifications" value={profile.doctor_qualifications} onChange={(e) => setProfile({ ...profile, doctor_qualifications: e.target.value })} placeholder="MBBS, MD, FRCP" />
                 </div>
                 <Button onClick={handleSaveProfile} disabled={isSaving}>
                   {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
@@ -323,7 +240,6 @@ const Profile = () => {
             </Card>
           </TabsContent>
 
-          {/* Preferences Tab */}
           <TabsContent value="preferences">
             <Card>
               <CardHeader>
@@ -347,31 +263,16 @@ const Profile = () => {
                     ].map(({ key, label }) => (
                       <div key={key} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                         <Label htmlFor={key} className="cursor-pointer">{label}</Label>
-                        <Switch
-                          id={key}
-                          checked={preferences[key as keyof PreferencesData] as boolean}
-                          onCheckedChange={(checked) => setPreferences({ ...preferences, [key]: checked })}
-                        />
+                        <Switch id={key} checked={preferences[key as keyof PreferencesData] as boolean} onCheckedChange={(checked) => setPreferences({ ...preferences, [key]: checked })} />
                       </div>
                     ))}
                   </div>
                 </div>
-
                 <Separator />
-
                 <div className="space-y-2">
                   <Label htmlFor="default_follow_up_days">Default Follow-up (Days)</Label>
-                  <Input
-                    id="default_follow_up_days"
-                    type="number"
-                    min={1}
-                    max={90}
-                    value={preferences.default_follow_up_days}
-                    onChange={(e) => setPreferences({ ...preferences, default_follow_up_days: parseInt(e.target.value) || 7 })}
-                    className="w-32"
-                  />
+                  <Input id="default_follow_up_days" type="number" min={1} max={90} value={preferences.default_follow_up_days} onChange={(e) => setPreferences({ ...preferences, default_follow_up_days: parseInt(e.target.value) || 7 })} className="w-32" />
                 </div>
-
                 <Button onClick={handleSavePreferences} disabled={isSaving}>
                   {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
                   Save Preferences
@@ -381,7 +282,6 @@ const Profile = () => {
           </TabsContent>
         </Tabs>
       </main>
-
       <Footer />
     </div>
   );
